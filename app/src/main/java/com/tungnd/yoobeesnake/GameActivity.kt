@@ -1,14 +1,36 @@
 package com.tungnd.yoobeesnake
 
+import android.graphics.Color
 import androidx.appcompat.app.AppCompatActivity
 import android.os.Bundle
 import android.view.View
+import com.tungnd.yoobeesnake.gamecomponents.GameView
 
 class GameActivity : AppCompatActivity() {
 
+    private var mGameView: GameView? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        setContentView(R.layout.activity_game)
+        mGameView = GameView(this)
+        //mGameView?.setBackgroundColor(Color.WHITE)
+        setContentView(mGameView)
+
+    }
+
+    override fun onResume() {
+        super.onResume()
+        mGameView?.resume()
+    }
+
+    override fun onPause() {
+        super.onPause()
+        mGameView?.pause()
+    }
+
+    override fun onStop() {
+        super.onStop()
+        mGameView?.stop()
     }
 
     override fun onWindowFocusChanged(hasFocus: Boolean) {

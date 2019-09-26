@@ -5,5 +5,6 @@ interface GameLoop {
     fun pause()
     fun resume()
     fun update()
+    fun draw()
     fun stop()
 }
