@@ -8,7 +8,6 @@ import android.util.AttributeSet
 import android.util.Log
 import android.view.SurfaceHolder
 import android.view.SurfaceView
-import android.icu.lang.UCharacter.GraphemeClusterBreak.T
 
 
 class GameView : SurfaceView, SurfaceHolder.Callback, GameLoop, Runnable {
@@ -22,6 +21,7 @@ class GameView : SurfaceView, SurfaceHolder.Callback, GameLoop, Runnable {
     private var mThread: Thread? = null
     private var mCanvas: Canvas? = null
     private var mRunning: Boolean = false
+    private var worm : Worm? = null
 
     constructor(ctx: Context) : super(ctx)
 
@@ -32,6 +32,8 @@ class GameView : SurfaceView, SurfaceHolder.Callback, GameLoop, Runnable {
         mHolder = holder
         mPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         mPaint?.setColor(Color.RED)
+        worm = Worm()
+
         when {
             mHolder != null -> mHolder?.addCallback(this)
         }
@@ -42,41 +44,23 @@ class GameView : SurfaceView, SurfaceHolder.Callback, GameLoop, Runnable {
 
     override fun run() {
         while (mRunning) {
-            if (mHolder?.surface?.isValid == true) {
-
-                //Log.d("draw", "Yeah")
-
-                mCanvas = mHolder?.lockCanvas()
-
-                val cx = mWidth.toFloat() / 2
-                val cy = mHeight.toFloat() / 2
-                mCanvas?.drawColor(Color.BLUE)
-                mPaint?.setColor(Color.YELLOW)
-                mPaint?.let {
-                    mCanvas?.drawCircle(cx, cy, 300f, it)
-
-                }
-                mHolder?.unlockCanvasAndPost(mCanvas)
-            }
-
-
+            draw()
             Thread.sleep(60)
-
         }
-
-
     }
 
 
     override fun draw() {
-
+        if (mHolder?.surface?.isValid == true) {
+            mCanvas = mHolder?.lockCanvas()
+            mCanvas?.drawColor(Color.WHITE)
+            worm?.draw(mCanvas)
+            mHolder?.unlockCanvasAndPost(mCanvas)
+        }
     }
 
     override fun start() {
-//        if(mThread == null){
-//            mThread = Thread(this)
-//        }
-//        mThread?.start()
+
     }
 
     override fun pause() {
@@ -108,7 +92,8 @@ class GameView : SurfaceView, SurfaceHolder.Callback, GameLoop, Runnable {
         //this.mHolder = holder
         this.mWidth = width
         this.mHeight = height
-        Log.d("surface", width.toString() + " : " + height)
+        Log.d("surface changed", width.toString() + " : " + height)
+        worm?.translateTo(mWidth.toFloat()/2, mHeight.toFloat()/2)
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder?) {
