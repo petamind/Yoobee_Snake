@@ -2,30 +2,58 @@ package com.tungnd.yoobeesnake.gamecomponents
 
 import android.graphics.*
 import android.util.Log
+import com.tungnd.yoobeesnake.utils.Maths
 import java.util.*
 import kotlin.collections.ArrayList
 
+/**
+ * @author Tung Nguyen (petaminds)
+ * The worm always moves to the destination with the speed defined by movement vector
+ */
+class Worm : Collidable, Runnable {
 
-class Worm: Collidable {
 
     private var mPaint = Paint()
     private var mPath = Path()
-    private var mMoveVec = Point(5, 5)
+    private var worm_pace = 0f
+    private var mCurrentMoveVector = PointF()
+    private var mTargetMoveVec = PointF()
     private var mSize = 300.0f
-        set(value) {field = value}
-    private var bodyPoints = ArrayList<FloatArray>()
-    private val BODY_SEGMENTS = 20
-    private val head=  RectF(0f, 0f , 40f, 40f)
+        set(value) {
+            field = value
+        }
+    private var bodyPoints = ArrayList<PointF>()
+    private val BODY_SEGMENTS = 50
+    private val CURVE_SEGMENTS = 5
+    private val head = RectF(0f, 0f, 40f, 40f)
+    private var mAnimationThread: Thread? = null
+    private val mAnimationFR = 15//5 frames /sec
+
+    var destination = PointF()
+        set(value) {
+            if(!field.equals(value))
+            {
+                field.set(value)
+                updateDirection()
+            }
+            Log.i(this.toString(), destination.toString())
+        }
 
     init {
-        mPath.cubicTo(mSize / 3, -mSize/5, mSize* 2 /3 ,mSize/5, mSize, 0f)
+        mPath.cubicTo(mSize / 3, -mSize / 5, mSize * 2 / 3, mSize / 5, mSize, 0f)
         val pm = PathMeasure(mPath, false)
 
-        for (f in 0.. BODY_SEGMENTS ){
+        for (f in 0..BODY_SEGMENTS) {
             val aBodyPoint = FloatArray(2)
-            pm.getPosTan(pm.length * f / BODY_SEGMENTS , aBodyPoint,null)
-            bodyPoints.add(aBodyPoint)
+            pm.getPosTan(pm.length * f / BODY_SEGMENTS, aBodyPoint, null)
+            val aBodyPointF = PointF(aBodyPoint[0], aBodyPoint[1])
+            bodyPoints.add(aBodyPointF)
         }
+
+        worm_pace = pm.length/BODY_SEGMENTS
+        mCurrentMoveVector.set(- worm_pace, 0f)
+        mTargetMoveVec.set(mCurrentMoveVector)
+
         mPath.reset()
 
         mPaint.apply {
@@ -37,6 +65,9 @@ class Worm: Collidable {
             isAntiAlias = true
             textSize = 60f
         }
+
+        mAnimationThread = Thread(this)
+        mAnimationThread?.start()
     }
 
     override fun collide(o: Collidable) {
@@ -46,43 +77,62 @@ class Worm: Collidable {
     /**
      *
      */
-    private fun move(){
+    private fun move() {
+
+        for (i in (bodyPoints.size - 1) downTo 1) {
+            bodyPoints[i].set(bodyPoints[i-1])
+        }
+        bodyPoints[0].offset(mCurrentMoveVector.x, mCurrentMoveVector.y)
 
     }
 
-    fun translateTo(x:Float, y:Float){
-       val dx = x -  bodyPoints[0][0]
-       val dy = y  - bodyPoints[0][1]
-        for(i in 0.. bodyPoints.size -1 ){
-            bodyPoints[i][0] += dx
-            bodyPoints[i][1] += dy
+    fun translateTo(x: Float, y: Float) {
+        val dx = x - bodyPoints[0].x
+        val dy = y - bodyPoints[0].y
+
+        for (i in 0..bodyPoints.size - 1) {
+            bodyPoints[i].offset(dx, dy)
         }
     }
 
     fun draw(c: Canvas?) {
-
-
         //draw the head
-        head.set(bodyPoints[0][0] - head.width()/2, bodyPoints[0][1] - head.height()/2
-            , bodyPoints[0][0] + head.width()/2, bodyPoints[0][1] + head.height()/2)
+        head.set(
+            bodyPoints[0].x - head.width() / 2, bodyPoints[0].y - head.height() / 2
+            , bodyPoints[0].x + head.width() / 2, bodyPoints[0].y + head.height() / 2
+        )
         //c?.save()
-        c?.rotate(45f, bodyPoints[0][0], bodyPoints[0][1])
+        c?.rotate(45f, bodyPoints[0].x, bodyPoints[0].y)
         mPaint.style = Paint.Style.FILL_AND_STROKE
         c?.drawRect(head, mPaint)
-        c?.rotate(-45f, bodyPoints[0][0], bodyPoints[0][1])
+        c?.rotate(-45f, bodyPoints[0].x, bodyPoints[0].y)
         //draw the body
         //c?.restore()
         mPaint.style = Paint.Style.STROKE
-        mPath.moveTo(bodyPoints[0][0], bodyPoints[0][1])
-        for (point in bodyPoints)
-        {
-            mPath.lineTo(point[0], point[1])
+        mPath.moveTo(bodyPoints[0].x, bodyPoints[0].y)
+        for (point in bodyPoints) {
+            mPath.lineTo(point.x, point.y)
         }
         c?.drawPath(mPath, mPaint)
         mPath.reset()
     }
 
+    override fun run() {
+        while (true){
+            move()
+            Thread.sleep(1000L / mAnimationFR)
+        }
+    }
 
-
+    private fun updateDirection() {
+        val v = PointF(destination.x - bodyPoints[0].x, destination.y - bodyPoints[0].y)
+        val diag = Math.sqrt((v.x*v.x + v.y*v.y).toDouble())
+        mCurrentMoveVector.set((worm_pace*v.x/diag).toFloat(), (worm_pace*v.y/diag).toFloat())
+//        if(!mCurrentMoveVector.equals(mTargetMoveVec)){
+//            if(Maths.CosineSim(mCurrentMoveVector, mTargetMoveVec) < 0.95){
+//
+//            }
+//        }
+    }
 
 }

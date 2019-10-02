@@ -4,8 +4,10 @@ import android.content.Context
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.Paint
+import android.graphics.PointF
 import android.util.AttributeSet
 import android.util.Log
+import android.view.MotionEvent
 import android.view.SurfaceHolder
 import android.view.SurfaceView
 
@@ -22,6 +24,9 @@ class GameView : SurfaceView, SurfaceHolder.Callback, GameLoop, Runnable {
     private var mCanvas: Canvas? = null
     private var mRunning: Boolean = false
     private var worm : Worm? = null
+    private var FPS = 30
+        set(value) {field = value}
+    private var timeToUpdate = 0L
 
     constructor(ctx: Context) : super(ctx)
 
@@ -33,7 +38,7 @@ class GameView : SurfaceView, SurfaceHolder.Callback, GameLoop, Runnable {
         mPaint = Paint(Paint.ANTI_ALIAS_FLAG)
         mPaint?.setColor(Color.RED)
         worm = Worm()
-
+        timeToUpdate =  System.currentTimeMillis()
         when {
             mHolder != null -> mHolder?.addCallback(this)
         }
@@ -44,9 +49,19 @@ class GameView : SurfaceView, SurfaceHolder.Callback, GameLoop, Runnable {
 
     override fun run() {
         while (mRunning) {
-            draw()
-            Thread.sleep(60)
+            if(timeToUpdate()) {
+                update()
+                draw()
+                Thread.sleep(16)
+            }
         }
+    }
+
+    private fun timeToUpdate(): Boolean {
+        if (timeToUpdate <= System.currentTimeMillis()){
+            return true
+        }
+        return false
     }
 
 
@@ -80,7 +95,7 @@ class GameView : SurfaceView, SurfaceHolder.Callback, GameLoop, Runnable {
     }
 
     override fun update() {
-
+        timeToUpdate += 1000 / FPS
     }
 
     override fun stop() {
@@ -104,6 +119,15 @@ class GameView : SurfaceView, SurfaceHolder.Callback, GameLoop, Runnable {
     override fun surfaceCreated(holder: SurfaceHolder?) {
         Log.d(this.toString(), "surface created")
         //this.mHolder = holder
+    }
+
+    override fun onTouchEvent(event: MotionEvent?): Boolean {
+        val mash = event?.actionMasked
+        when(mash){
+            MotionEvent.ACTION_DOWN, MotionEvent.ACTION_MOVE -> event?.x?.let { worm?.destination = PointF(it, event.y) }
+        }
+
+        return true
     }
 
 }
