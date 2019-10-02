@@ -99,7 +99,7 @@ class GameView : SurfaceView, SurfaceHolder.Callback, GameLoop, Runnable {
     }
 
     override fun stop() {
-
+        worm?.state = SpriteState.DEAD
     }
 
     override fun surfaceChanged(holder: SurfaceHolder?, format: Int, width: Int, height: Int) {

@@ -14,7 +14,10 @@ class Worm : Collidable, Runnable {
 
     private var mPaint = Paint()
     private var mPath = Path()
+    var state = SpriteState.ALIVE
+
     private var worm_pace = 0f
+    private var timeToMove = 0L
     @Volatile
     private var mCurrentMoveVector = PointF()
     private var mTargetMoveVec = PointF()
@@ -24,12 +27,14 @@ class Worm : Collidable, Runnable {
         }
     private var bodyPoints = ArrayList<PointF>()
     private val BODY_SEGMENTS = 50
-    private val head = RectF(0f, 0f, 40f, 40f)
+    private val head = RectF(-15f, 15f, 15f, -15f)
+    private var mHeadPoints: Array<PointF>? = null
+    private var headFacingDegree = -45
     private val mHeadTracker = PointF()
     private var mAnimationThread: Thread? = null
-    private val mAnimationFR = 15//5 frames /sec
-    private var mHeadRadial = 0.0
-    private var mMoveAmplitude = 0f
+    private val mAnimationFR = 26//5 frames /sec
+    private var mHeadRadial = 0.0 //Moving up and down witn sinus
+    private var mMoveAmplitude = 0f //head moving amplitude
     @Volatile
     private var isRotatingHead = false
     private var mRotateHeadRunnable = Runnable {
@@ -80,6 +85,13 @@ class Worm : Collidable, Runnable {
 
         mPath.reset()
 
+        val r45deg = PointF(1f, -1f)
+        val p1 = Maths.RotatedCoordinate(head.top, head.right, r45deg)
+        val p2 = Maths.RotatedCoordinate(head.top, head.left, r45deg)
+        val p3 = Maths.RotatedCoordinate(head.bottom, head.left, r45deg)
+        val p4 = Maths.RotatedCoordinate(head.bottom, head.right, r45deg)
+        mHeadPoints = arrayOf(p1, p2, p3, p4)
+
         mPaint.apply {
             color = Color.BLACK
             style = Paint.Style.STROKE
@@ -115,6 +127,7 @@ class Worm : Collidable, Runnable {
             bodyPoints[i].set(bodyPoints[i - 1])
         }
 
+        //Location of head
         bodyPoints[0].set(
             mHeadTracker.x + dTranspose.x,
             mHeadTracker.y + dTranspose.y
@@ -134,31 +147,98 @@ class Worm : Collidable, Runnable {
 
     fun draw(c: Canvas?) {
         //draw the head
-        head.set(
-            bodyPoints[0].x - head.width() / 2, bodyPoints[0].y - head.height() / 2
-            , bodyPoints[0].x + head.width() / 2, bodyPoints[0].y + head.height() / 2
-        )
-        //c?.save()
-        c?.rotate(45f, bodyPoints[0].x, bodyPoints[0].y)
+        val p1 =
+            mHeadPoints?.get(0)?.x?.let {
+                mHeadPoints?.get(0)?.y?.let { it1 ->
+                    Maths.RotatedCoordinate(
+                        it,
+                        it1, mCurrentMoveVector
+                    )
+                }
+            }
+        val p2 =
+            mHeadPoints?.get(1)?.x?.let {
+                mHeadPoints?.get(1)?.y?.let { it1 ->
+                    Maths.RotatedCoordinate(
+                        it,
+                        it1, mCurrentMoveVector
+                    )
+                }
+            }
+        val p3 =
+            mHeadPoints?.get(2)?.x?.let {
+                mHeadPoints?.get(2)?.y?.let { it1 ->
+                    Maths.RotatedCoordinate(
+                        it,
+                        it1, mCurrentMoveVector
+                    )
+                }
+            }
+        val p4 =
+            mHeadPoints?.get(3)?.x?.let {
+                mHeadPoints?.get(3)?.y?.let { it1 ->
+                    Maths.RotatedCoordinate(
+                        it,
+                        it1, mCurrentMoveVector
+                    )
+                }
+            }
+
+
+        if (p1 != null && p2 != null && p3 != null && p4 != null) {
+            mPath.moveTo(bodyPoints[0].x + p1.x, bodyPoints[0].y + p1.y)
+            mPath.lineTo(bodyPoints[0].x + p2.x, bodyPoints[0].y + p2.y)
+            mPath.lineTo(bodyPoints[0].x + p3.x, bodyPoints[0].y + p3.y)
+            mPath.lineTo(bodyPoints[0].x + p4.x, bodyPoints[0].y + p4.y)
+            mPath.close()
+        }
+
+
         mPaint.style = Paint.Style.FILL_AND_STROKE
-        c?.drawRect(head, mPaint)
-        c?.rotate(-45f, bodyPoints[0].x, bodyPoints[0].y)
-        //draw the body
-        //c?.restore()
+        mPaint.setColor(Color.BLACK)
+        c?.drawPath(mPath, mPaint)
+
+
+        //draw body
+
         mPaint.style = Paint.Style.STROKE
+        mPaint.setColor(Color.BLACK)
         mPath.moveTo(bodyPoints[0].x, bodyPoints[0].y)
         for (point in bodyPoints) {
             mPath.lineTo(point.x, point.y)
         }
         c?.drawPath(mPath, mPaint)
+
+        //draw nose
+        mPaint.style = Paint.Style.FILL_AND_STROKE
+        val nose = PointF(bodyPoints[0].x + p1!!.x, bodyPoints[0].y + p1.y)
+        mPaint.setColor(Color.GREEN)
+
+        c?.drawPoint(
+            nose.x, nose.y,
+            mPaint
+        )
+
+
+
         mPath.reset()
     }
 
     override fun run() {
-        while (true) {
-            move()
-            Thread.sleep(1000L / mAnimationFR)
+        while (state == SpriteState.ALIVE) {
+            if (isTimeToMove()) {
+                move()
+            }
         }
+    }
+
+    private fun isTimeToMove(): Boolean {
+        val now = System.currentTimeMillis()
+        if (timeToMove < now) {
+            timeToMove = now + 1000L / mAnimationFR
+            return true
+        }
+        return false
     }
 
     private fun updateDirection() {
