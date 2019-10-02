@@ -3,7 +3,6 @@ package com.tungnd.yoobeesnake.gamecomponents
 import android.graphics.*
 import android.util.Log
 import com.tungnd.yoobeesnake.utils.Maths
-import java.util.*
 import kotlin.collections.ArrayList
 
 /**
@@ -16,6 +15,7 @@ class Worm : Collidable, Runnable {
     private var mPaint = Paint()
     private var mPath = Path()
     private var worm_pace = 0f
+    @Volatile
     private var mCurrentMoveVector = PointF()
     private var mTargetMoveVec = PointF()
     private var mSize = 300.0f
@@ -24,13 +24,34 @@ class Worm : Collidable, Runnable {
         }
     private var bodyPoints = ArrayList<PointF>()
     private val BODY_SEGMENTS = 50
-    private val CURVE_SEGMENTS = 5
     private val head = RectF(0f, 0f, 40f, 40f)
     private val mHeadTracker = PointF()
     private var mAnimationThread: Thread? = null
     private val mAnimationFR = 15//5 frames /sec
     private var mHeadRadial = 0.0
-    private var mMoveAmplitute = 0f
+    private var mMoveAmplitude = 0f
+    @Volatile
+    private var isRotatingHead = false
+    private var mRotateHeadRunnable = Runnable {
+        run() {
+            val dx = (mTargetMoveVec.x - mCurrentMoveVector.x) / mAnimationFR
+            val dy = (mTargetMoveVec.y - mCurrentMoveVector.y) / mAnimationFR
+
+            while (Maths.CosineSim(mCurrentMoveVector, mTargetMoveVec) < 0.95 && isRotatingHead) {
+                val rVec = PointF()
+                rVec.set(mCurrentMoveVector)
+                rVec.offset(dx, dy)
+                val sc = Maths.VecSinCos(rVec)
+
+                mCurrentMoveVector.set(worm_pace * sc.x, worm_pace * sc.y)
+                Log.d("rotate", mCurrentMoveVector.toString())
+                Thread.sleep(1000L / mAnimationFR)
+            }
+
+            mCurrentMoveVector.set(mTargetMoveVec)
+            isRotatingHead = false
+        }
+    }
 
     var destination = PointF()
         set(value) {
@@ -55,7 +76,7 @@ class Worm : Collidable, Runnable {
         worm_pace = pm.length / BODY_SEGMENTS
         mCurrentMoveVector.set(-worm_pace, 0f)
         mTargetMoveVec.set(mCurrentMoveVector)
-        mMoveAmplitute = 2 * worm_pace
+        mMoveAmplitude = 2 * worm_pace
 
         mPath.reset()
 
@@ -86,18 +107,8 @@ class Worm : Collidable, Runnable {
         mHeadRadial += 2 * Math.PI / mAnimationFR
 
         val dxOrigin = 0f
-        val dyOrigin = mMoveAmplitute * Math.sin(mHeadRadial)//*
-        //(if (mCurrentMoveVector.y > 0)  1 else -1)
+        val dyOrigin = mMoveAmplitude * Math.sin(mHeadRadial)
         val dTranspose = Maths.RotatedCoordinate(dxOrigin, dyOrigin.toFloat(), mCurrentMoveVector)
-
-
-//        val diag =  Math.sqrt((mCurrentMoveVector.y * mCurrentMoveVector.y +
-//                mCurrentMoveVector.x * mCurrentMoveVector.x).toDouble())
-//        val sinOfCurrentMoveVec = mCurrentMoveVector.y / diag
-//        val cosOfCurrentMoveVec = mCurrentMoveVector.x / diag
-//
-//        val dxTransposed = dxOrigin * cosOfCurrentMoveVec - dyOrigin*sinOfCurrentMoveVec
-//        val dyTransposed = dxOrigin * sinOfCurrentMoveVec + dyOrigin * cosOfCurrentMoveVec
 
         //update body part
         for (i in (bodyPoints.size - 1) downTo 1) {
@@ -105,8 +116,8 @@ class Worm : Collidable, Runnable {
         }
 
         bodyPoints[0].set(
-            (mHeadTracker.x + dTranspose.x).toFloat(),
-            (mHeadTracker.y + dTranspose.y).toFloat()
+            mHeadTracker.x + dTranspose.x,
+            mHeadTracker.y + dTranspose.y
         )
 
     }
@@ -151,17 +162,22 @@ class Worm : Collidable, Runnable {
     }
 
     private fun updateDirection() {
-        val v = PointF(destination.x - bodyPoints[0].x, destination.y - bodyPoints[0].y)
-        val diag = Math.sqrt((v.x * v.x + v.y * v.y).toDouble())
-        mCurrentMoveVector.set(
-            (worm_pace * v.x / diag).toFloat(),
-            (worm_pace * v.y / diag).toFloat()
+        isRotatingHead = false
+        val v = PointF(destination.x - mHeadTracker.x, destination.y - mHeadTracker.y)
+        val sc = Maths.VecSinCos(v)
+        mTargetMoveVec.set(
+            worm_pace * sc.x,
+            worm_pace * sc.y
         )
-//        if(!mCurrentMoveVector.equals(mTargetMoveVec)){
-//            if(Maths.CosineSim(mCurrentMoveVector, mTargetMoveVec) < 0.95){
+        isRotatingHead = true
+
+        Thread(mRotateHeadRunnable).start()
+//        if (Maths.CosineSim(mCurrentMoveVector, mTargetMoveVec) < 0.95) {
 //
-//            }
+//        } else {
+//            mCurrentMoveVector.set(mTargetMoveVec)
 //        }
+
     }
 
 }
