@@ -26,15 +26,15 @@ class Worm : Collidable, Runnable {
     private val BODY_SEGMENTS = 50
     private val CURVE_SEGMENTS = 5
     private val head = RectF(0f, 0f, 40f, 40f)
+    private val mHeadTracker = PointF()
     private var mAnimationThread: Thread? = null
     private val mAnimationFR = 15//5 frames /sec
-    private var mHeadRadial = 0f
+    private var mHeadRadial = 0.0
     private var mMoveAmplitute = 0f
 
     var destination = PointF()
         set(value) {
-            if(!field.equals(value))
-            {
+            if (!field.equals(value)) {
                 field.set(value)
                 updateDirection()
             }
@@ -52,10 +52,10 @@ class Worm : Collidable, Runnable {
             bodyPoints.add(aBodyPointF)
         }
 
-        worm_pace = pm.length/BODY_SEGMENTS
-        mCurrentMoveVector.set(- worm_pace, 0f)
+        worm_pace = pm.length / BODY_SEGMENTS
+        mCurrentMoveVector.set(-worm_pace, 0f)
         mTargetMoveVec.set(mCurrentMoveVector)
-        mMoveAmplitute = 2* worm_pace
+        mMoveAmplitute = 2 * worm_pace
 
         mPath.reset()
 
@@ -81,25 +81,32 @@ class Worm : Collidable, Runnable {
      *
      */
     private fun move() {
-        mHeadRadial += 360 / mAnimationFR
-        mHeadRadial %= 360
+        mHeadTracker.offset(mCurrentMoveVector.x, mCurrentMoveVector.y)
+        //move zigzag
+        mHeadRadial += 2 * Math.PI / mAnimationFR
 
-        val dxOrigin = mCurrentMoveVector.x
-        val dyOrigin = mMoveAmplitute*Math.sin(Math.toRadians(mHeadRadial.toDouble())).toFloat()
-        val diag = Math.sqrt((mCurrentMoveVector.y*mCurrentMoveVector.y + mCurrentMoveVector.x*mCurrentMoveVector.x).toDouble())
-        val sinOfCurrentMoveVec = mCurrentMoveVector.y/diag
-        val cosOfCurrentMoveVec = mCurrentMoveVector.x/diag
+        val dxOrigin = 0f
+        val dyOrigin = mMoveAmplitute * Math.sin(mHeadRadial)//*
+        //(if (mCurrentMoveVector.y > 0)  1 else -1)
+        val dTranspose = Maths.RotatedCoordinate(dxOrigin, dyOrigin.toFloat(), mCurrentMoveVector)
 
-        val dyTransposed = dyOrigin * cosOfCurrentMoveVec
-        val dxTransposed = dxOrigin * sinOfCurrentMoveVec
 
+//        val diag =  Math.sqrt((mCurrentMoveVector.y * mCurrentMoveVector.y +
+//                mCurrentMoveVector.x * mCurrentMoveVector.x).toDouble())
+//        val sinOfCurrentMoveVec = mCurrentMoveVector.y / diag
+//        val cosOfCurrentMoveVec = mCurrentMoveVector.x / diag
+//
+//        val dxTransposed = dxOrigin * cosOfCurrentMoveVec - dyOrigin*sinOfCurrentMoveVec
+//        val dyTransposed = dxOrigin * sinOfCurrentMoveVec + dyOrigin * cosOfCurrentMoveVec
+
+        //update body part
         for (i in (bodyPoints.size - 1) downTo 1) {
-            bodyPoints[i].set(bodyPoints[i-1])
+            bodyPoints[i].set(bodyPoints[i - 1])
         }
 
-        bodyPoints[0].offset(
-            mCurrentMoveVector.x,
-            dyTransposed.toFloat()
+        bodyPoints[0].set(
+            (mHeadTracker.x + dTranspose.x).toFloat(),
+            (mHeadTracker.y + dTranspose.y).toFloat()
         )
 
     }
@@ -111,6 +118,7 @@ class Worm : Collidable, Runnable {
         for (i in 0..bodyPoints.size - 1) {
             bodyPoints[i].offset(dx, dy)
         }
+        mHeadTracker.set(bodyPoints[0])
     }
 
     fun draw(c: Canvas?) {
@@ -136,7 +144,7 @@ class Worm : Collidable, Runnable {
     }
 
     override fun run() {
-        while (true){
+        while (true) {
             move()
             Thread.sleep(1000L / mAnimationFR)
         }
@@ -144,8 +152,11 @@ class Worm : Collidable, Runnable {
 
     private fun updateDirection() {
         val v = PointF(destination.x - bodyPoints[0].x, destination.y - bodyPoints[0].y)
-        val diag = Math.sqrt((v.x*v.x + v.y*v.y).toDouble())
-        mCurrentMoveVector.set((worm_pace*v.x/diag).toFloat(), (worm_pace*v.y/diag).toFloat())
+        val diag = Math.sqrt((v.x * v.x + v.y * v.y).toDouble())
+        mCurrentMoveVector.set(
+            (worm_pace * v.x / diag).toFloat(),
+            (worm_pace * v.y / diag).toFloat()
+        )
 //        if(!mCurrentMoveVector.equals(mTargetMoveVec)){
 //            if(Maths.CosineSim(mCurrentMoveVector, mTargetMoveVec) < 0.95){
 //
