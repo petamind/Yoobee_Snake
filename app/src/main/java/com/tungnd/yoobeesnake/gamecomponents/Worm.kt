@@ -172,12 +172,6 @@ class Worm : Collidable, Runnable {
         isRotatingHead = true
 
         Thread(mRotateHeadRunnable).start()
-//        if (Maths.CosineSim(mCurrentMoveVector, mTargetMoveVec) < 0.95) {
-//
-//        } else {
-//            mCurrentMoveVector.set(mTargetMoveVec)
-//        }
-
     }
 
 }
