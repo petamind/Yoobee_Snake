@@ -28,6 +28,8 @@ class Worm : Collidable, Runnable {
     private val head = RectF(0f, 0f, 40f, 40f)
     private var mAnimationThread: Thread? = null
     private val mAnimationFR = 15//5 frames /sec
+    private var mHeadRadial = 0f
+    private var mMoveAmplitute = 0f
 
     var destination = PointF()
         set(value) {
@@ -53,6 +55,7 @@ class Worm : Collidable, Runnable {
         worm_pace = pm.length/BODY_SEGMENTS
         mCurrentMoveVector.set(- worm_pace, 0f)
         mTargetMoveVec.set(mCurrentMoveVector)
+        mMoveAmplitute = 2* worm_pace
 
         mPath.reset()
 
@@ -78,11 +81,26 @@ class Worm : Collidable, Runnable {
      *
      */
     private fun move() {
+        mHeadRadial += 360 / mAnimationFR
+        mHeadRadial %= 360
+
+        val dxOrigin = mCurrentMoveVector.x
+        val dyOrigin = mMoveAmplitute*Math.sin(Math.toRadians(mHeadRadial.toDouble())).toFloat()
+        val diag = Math.sqrt((mCurrentMoveVector.y*mCurrentMoveVector.y + mCurrentMoveVector.x*mCurrentMoveVector.x).toDouble())
+        val sinOfCurrentMoveVec = mCurrentMoveVector.y/diag
+        val cosOfCurrentMoveVec = mCurrentMoveVector.x/diag
+
+        val dyTransposed = dyOrigin * cosOfCurrentMoveVec
+        val dxTransposed = dxOrigin * sinOfCurrentMoveVec
 
         for (i in (bodyPoints.size - 1) downTo 1) {
             bodyPoints[i].set(bodyPoints[i-1])
         }
-        bodyPoints[0].offset(mCurrentMoveVector.x, mCurrentMoveVector.y)
+
+        bodyPoints[0].offset(
+            mCurrentMoveVector.x,
+            dyTransposed.toFloat()
+        )
 
     }
 
