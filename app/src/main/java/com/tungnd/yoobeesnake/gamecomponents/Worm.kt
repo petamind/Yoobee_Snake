@@ -41,7 +41,7 @@ class Worm : Collidable, Runnable {
         val dx = (mTargetMoveVec.x - mCurrentMoveVector.x) / mAnimationFR
         val dy = (mTargetMoveVec.y - mCurrentMoveVector.y) / mAnimationFR
 
-        while (Maths.CosineSim(mCurrentMoveVector, mTargetMoveVec) < 0.95 && isRotatingHead) {
+        while (Maths.CosineSim(mCurrentMoveVector, mTargetMoveVec) < 0.98 && isRotatingHead) {
             val rVec = PointF()
             rVec.set(mCurrentMoveVector)
             rVec.offset(dx, dy)
@@ -143,31 +143,33 @@ class Worm : Collidable, Runnable {
         mHeadTracker.set(bodyPoints[0])
     }
 
-    fun draw(c: Canvas?) {
-        //draw the head
+    private fun getHeadPoints(): ArrayList<PointF> {
         val hps = arrayListOf<PointF>()
         mHeadPoints.forEach {
             hps.add(
-                Maths.RotatedCoordinate(
-                    it!!.x,
-                    it!!.y, mCurrentMoveVector
-                )
+                Maths.RotatedCoordinate(it.x, it.y, mCurrentMoveVector)
             )
+            hps.last().offset(bodyPoints[0].x, bodyPoints[0].y)
         }
+        return hps
+    }
 
-        mPath.moveTo(bodyPoints[0].x + hps[3].x, bodyPoints[0].y + hps[3].y)
-        hps.forEach { mPath.lineTo(bodyPoints[0].x + it.x, bodyPoints[0].y + it.y) }
+    fun draw(c: Canvas?) {
+        //draw the head
+        val hps = getHeadPoints()
+
+        mPath.moveTo(hps.last().x, hps.last().y)
+        hps.forEach { mPath.lineTo(it.x, it.y) }
         mPath.close()
 
         mPaint.style = Paint.Style.FILL_AND_STROKE
         mPaint.setColor(Color.BLACK)
         c?.drawPath(mPath, mPaint)
 
-
         //draw body
-
         mPaint.style = Paint.Style.STROKE
         mPaint.setColor(Color.BLACK)
+
         mPath.moveTo(bodyPoints[0].x, bodyPoints[0].y)
         for (point in bodyPoints) {
             mPath.lineTo(point.x, point.y)
@@ -176,16 +178,13 @@ class Worm : Collidable, Runnable {
 
         //draw nose
         mPaint.style = Paint.Style.FILL_AND_STROKE
-        val nose = PointF(bodyPoints[0].x + hps[0]!!.x, bodyPoints[0].y + hps[0].y)
+        val nose = PointF(hps[0]!!.x, hps[0].y)
         mPaint.setColor(Color.GREEN)
 
         c?.drawPoint(
             nose.x, nose.y,
             mPaint
         )
-
-
-
         mPath.reset()
     }
 
