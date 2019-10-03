@@ -73,8 +73,7 @@ class Worm : Collidable, Runnable {
         for (f in 0..BODY_SEGMENTS) {
             val aBodyPoint = FloatArray(2)
             pm.getPosTan(pm.length * f / BODY_SEGMENTS, aBodyPoint, null)
-            val aBodyPointF = PointF(aBodyPoint[0], aBodyPoint[1])
-            bodyPoints.add(aBodyPointF)
+            bodyPoints.add(PointF(aBodyPoint[0], aBodyPoint[1]))
         }
 
         worm_pace = pm.length / BODY_SEGMENTS
