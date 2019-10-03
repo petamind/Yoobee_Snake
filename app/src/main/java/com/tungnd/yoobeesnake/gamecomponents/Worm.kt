@@ -29,12 +29,13 @@ class Worm : Collidable, Runnable {
     private val BODY_SEGMENTS = 50
 
     private val mHeadPoints = arrayOf(PointF(), PointF(), PointF(), PointF())
-
     private val mHeadTracker = PointF()
+    private var mHeadRadial = 0.0 //Moving up and down witn sinus phase
+    private var mMoveAmplitude = 0f //head moving amplitude
+
     private var mAnimationThread: Thread? = null
     private val mAnimationFR = 26//5 frames /sec
-    private var mHeadRadial = 0.0 //Moving up and down witn sinus
-    private var mMoveAmplitude = 0f //head moving amplitude
+
     @Volatile
     private var isRotatingHead = false
     private var mRotateHeadRunnable = Runnable {
