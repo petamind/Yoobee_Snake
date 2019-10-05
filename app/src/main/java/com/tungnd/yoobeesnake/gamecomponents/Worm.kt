@@ -141,6 +141,7 @@ class Worm : Collidable, Runnable {
             bodyPoints[i].offset(dx, dy)
         }
         mHeadTracker.set(bodyPoints[0])
+
     }
 
     private fun getHeadPoints(): ArrayList<PointF> {

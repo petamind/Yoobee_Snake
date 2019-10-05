@@ -108,7 +108,7 @@ class GameView : SurfaceView, SurfaceHolder.Callback, GameLoop, Runnable {
         this.mWidth = width
         this.mHeight = height
         Log.d("surface changed", width.toString() + " : " + height)
-        worm?.translateTo(mWidth.toFloat()/2, mHeight.toFloat()/2)
+        worm?.translateTo(mWidth.toFloat(), mHeight.toFloat() / 2)
     }
 
     override fun surfaceDestroyed(holder: SurfaceHolder?) {
